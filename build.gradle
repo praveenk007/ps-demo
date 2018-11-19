@@ -1,0 +1,96 @@
+buildscript {
+	ext {
+		springBootVersion = '2.0.0.M6'
+	}
+	repositories {
+		mavenCentral()
+		maven { url "https://repo.spring.io/snapshot" }
+		maven { url "https://repo.spring.io/milestone" }
+		maven {url "https://plugins.gradle.org/m2/"}
+	}
+	dependencies {
+		classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
+		classpath("se.transmode.gradle:gradle-docker:1.2")
+
+
+	}
+}
+
+apply plugin: 'java'
+apply plugin: 'eclipse'
+apply plugin: 'org.springframework.boot'
+apply plugin: 'io.spring.dependency-management'
+apply plugin: "docker"
+
+dependencyManagement {
+	imports {
+		mavenBom "io.projectreactor:reactor-bom:Bismuth-SR9"
+	}
+}
+
+task buildDocker(type: Docker, dependsOn: build) {
+	registry = '227866648348.dkr.ecr.ap-southeast-1.amazonaws.com'  // AWS Registry [AWS Container Service]
+	baseImage = 'develar/java:latest' //FROM alpine:3.5 // FROM ubuntu:14.04
+	maintainer = 'Chetan R'
+	push = true
+	addFile {
+		from jar
+		rename {'app.jar'}
+	}
+	entryPoint(['java' ,'-jar', '/app.jar'])
+	// exposePort(8080)
+}
+
+version = '0.0.1-SNAPSHOT'
+sourceCompatibility = 1.8
+
+repositories {
+	mavenLocal()
+	mavenCentral()
+	maven { url "https://repo.spring.io/snapshot" }
+	maven { url "https://repo.spring.io/milestone" }
+	maven {url "http://nexus.turtlemint.com/repository/maven-public/"}
+}
+
+
+dependencies {
+	compile('org.springframework.boot:spring-boot-starter-data-mongodb-reactive')
+	compile('org.springframework.boot:spring-boot-starter-amqp')
+	compile('org.springframework.boot:spring-boot-starter-webflux')
+	compile('org.projectlombok:lombok:1.16.18')
+	compile("org.springframework.boot:spring-boot-starter-thymeleaf")
+	compile("org.springframework.boot:spring-boot-devtools")
+	compile('com.turtle:turtle-beans:7.3.4.3-pk')
+	compile('com.turtlemint:turtle-constants:5.4.0.8-pk')
+	compile('com.turtle:turtle-mails:1.6-SNAPSHOT')
+	compile("com.crypto.app:turtle-crypto:1.7") 				// new broker specific build
+	compile group: 'org.synchronoss.cloud', name: 'nio-multipart-parser', version: '1.1.0'
+	compile group: 'org.apache.commons', name: 'commons-lang3', version: '3.0'
+	compile fileTree(dir: 'lib', include: '*.jar')
+	testCompile('org.springframework.boot:spring-boot-starter-test')
+	compile group: 'org.springframework', name: 'spring-aop', version: '5.0.2.RELEASE'
+	compile group: 'org.aspectj', name: 'aspectjrt', version: '1.8.13'
+	compile group: 'org.aspectj', name: 'aspectjweaver', version: '1.8.13'
+	compile group: 'com.google.guava', name: 'guava', version: '11.0.2'
+	compile group: 'com.aerospike', name: 'aerospike-client', version: '3.1.0'
+
+	compile group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.9.7'
+
+	compile group: 'joda-time', name: 'joda-time', version: '2.9.9'
+
+	compile 'io.projectreactor:reactor-core'
+	testCompile('io.projectreactor:reactor-test')
+}
+
+//configurations.all {
+//	exclude module: "logback-classic"
+//}
+
+tasks.withType(JavaExec) {
+	if (System.getProperty('DEBUG', 'false') == 'true') {
+		jvmArgs '-Xdebug', '-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=9099'
+	}
+}
+
+
+
